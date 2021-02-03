@@ -23,24 +23,82 @@ export function PeerContextProvider({ children }: { children: any }) {
   const [peerconState, setPeerconState] = useState(false);
 
   useEffect(() => {
+    console.log(peerconState)
+  }, [peerconState])
+
+  useEffect(() => {
+    console.log('peer con set:', peerConnection, peerconState)
+    if (peerConnection && !peerconState) {
+
+      const open = () => {
+        console.log('connected');
+        setPeerconState(true);
+      }
+
+      peerConnection.on('open', open)
+      console.log('open event set')
+
+
+      return () => {
+        peerConnection.off('open', open)
+
+      }
+    }
+  }, [peerConnection, peerconState])
+
+  useEffect(() => {
+    if (peerConnection) {
+      const close = () => {
+        console.log('disconnected');
+        setPeerconState(false);
+        setPeerConnection(undefined);
+      }
+      const err = (err: any) => {
+        console.log('err', err);
+        setPeerconState(false);
+        setPeerConnection(undefined);
+
+      }
+      peerConnection.on('close', close)
+      peerConnection.on('error', err)
+
+      return () => {
+        peerConnection.off('close', close)
+        peerConnection.off('error', err)
+      }
+    }
+  }, [peerConnection])
+
+  useEffect(() => {
     const p = new Peer(nanoid(5), {
       host: "ciapeer.herokuapp.com",
       secure: true,
     });
 
-    p.on("open", (id) => {
+    const open = (id: string) => {
       setPeer(p);
       console.log(id);
-    });
-
-    p.on("error", (err) => {
+    }
+    const err = (err: any) => {
       if (err.type === "unavailable-id") {
         window.location.reload();
       }
-    });
-    p.on("connection", function (conn) {
+    }
+    const connection = (conn: Peer.DataConnection) => {
+      console.log('getting connection from', conn.peer)
       setPeerConnection(conn);
-    });
+    }
+    p.on("open", open);
+
+    p.on("error", err);
+    p.on("connection", connection);
+
+    return () => {
+      p.off('open', open);
+      p.off('error', err);
+      p.off('connection', connection);
+    }
+
   }, []);
 
   return (
