@@ -1,6 +1,11 @@
 import React, { useContext, useEffect, useState } from "react";
 import { PeerContext } from "./PeerContext";
-import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useTransform,
+} from "framer-motion";
 import "./css/home.css";
 
 import SettingsEthernetOutlinedIcon from "@material-ui/icons/SettingsEthernetOutlined";
@@ -11,6 +16,7 @@ import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 import AssignmentOutlinedIcon from "@material-ui/icons/AssignmentOutlined";
 import Fab from "@material-ui/core/Fab";
+import { copyTextToClipboard } from "./utils";
 
 export default function Home() {
   const { peer, peerConnection, peerconState } = useContext(PeerContext);
@@ -18,12 +24,12 @@ export default function Home() {
   const [pullState, setPullState] = useState(0);
   const [pullPage, setPullPage] = useState("main");
   const [shade, setShade] = useState(false);
-  const y = useMotionValue(0)
+  const y = useMotionValue(0);
   const background = useTransform(
     y,
     [-100, 0],
     ["#161922", "#0077ff"].reverse()
-  )
+  );
   function runMenu(ps: number) {
     switch (ps) {
       case 0:
@@ -31,6 +37,9 @@ export default function Home() {
         break;
       case 1:
         setPullPage("connect");
+        break;
+      case 2:
+        peer && copyTextToClipboard(peer.id);
         break;
       case 3:
         // share
@@ -43,40 +52,55 @@ export default function Home() {
 
   useEffect(() => {
     if (peerConnection && peerconState) {
-      if (pullPage !== 'connect') setPullPage('connect')
+      if (pullPage !== "connect") setPullPage("connect");
     }
-  }, [peerConnection, peerconState, pullPage])
+  }, [peerConnection, peerconState, pullPage]);
 
   return (
-    <motion.div style={{ background: peerconState ? background : '' }} className="home">
+    <motion.div
+      style={{ background: peerconState ? background : "" }}
+      className="home"
+    >
       <AnimatePresence>
         {shade && pullState > 0 ? <Shade {...{ pullState }} /> : ""}
       </AnimatePresence>
       <motion.header
         drag="y"
         style={{ y }}
-        onDragStart={!peerconState ? () => {
-          setShade(true);
-          setPullState(0);
-        } : () => { }}
-        onDragEnd={!peerconState ? () => {
-          setShade(false);
-          runMenu(pullState);
-        } : () => { }}
-        onDrag={!peerconState ? (e, i) => {
-          if (peer) {
-            const y = -(i.offset.y);
-            if (y > 250 && y < 400) {
-              setPullState(1);
-            } else if (y >= 400 && y < 500) {
-              setPullState(2);
-            } else if (y >= 500 && y < 550) {
-              setPullState(3);
-            } else if (y <= 250) {
-              setPullState(0);
-            }
-          }
-        } : () => { }}
+        onDragStart={
+          !peerconState
+            ? () => {
+                setShade(true);
+                setPullState(0);
+              }
+            : () => {}
+        }
+        onDragEnd={
+          !peerconState
+            ? () => {
+                setShade(false);
+                runMenu(pullState);
+              }
+            : () => {}
+        }
+        onDrag={
+          !peerconState
+            ? (e, i) => {
+                if (peer) {
+                  const y = -i.offset.y;
+                  if (y > 250 && y < 400) {
+                    setPullState(1);
+                  } else if (y >= 400 && y < 500) {
+                    setPullState(2);
+                  } else if (y >= 500 && y < 550) {
+                    setPullState(3);
+                  } else if (y <= 250) {
+                    setPullState(0);
+                  }
+                }
+              }
+            : () => {}
+        }
         dragConstraints={{ top: 0, bottom: 0 }}
       >
         {peer ? (
@@ -93,39 +117,39 @@ export default function Home() {
           ) : pullPage === "connect" ? (
             <Connect />
           ) : (
-                  <></>
-                )
+            <></>
+          )
         ) : (
-            <motion.div
-              className="connecting-loader"
-              initial={{
-                opacity: 0,
-                height: 0,
-                y: 0,
-                background: "#0077ff",
+          <motion.div
+            className="connecting-loader"
+            initial={{
+              opacity: 0,
+              height: 0,
+              y: 0,
+              background: "#0077ff",
+            }}
+            animate={{
+              opacity: 1,
+              height: "auto",
+              background: "coral",
+              y: 0,
+            }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                repeat: Infinity,
+                repeatType: "reverse",
+                stiffness: 0.2,
+                damping: 0.5,
               }}
-              animate={{
-                opacity: 1,
-                height: "auto",
-                background: "coral",
-                y: 0,
-              }}
-              exit={{ opacity: 0, height: 0 }}
             >
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                  stiffness: 0.2,
-                  damping: 0.5,
-                }}
-              >
-                Assigning ID...
+              Assigning ID...
             </motion.p>
-            </motion.div>
-          )}
+          </motion.div>
+        )}
       </motion.header>
     </motion.div>
   );
@@ -133,28 +157,36 @@ export default function Home() {
 
 function Connect() {
   const [clip, setClip] = useState("");
-  const { peer, peerConnection, peerconState, setPeerConnection } = useContext(PeerContext);
+  const { peer, peerConnection, peerconState, setPeerConnection } = useContext(
+    PeerContext
+  );
   const [otherid, setOtherid] = useState("");
 
   useEffect(() => {
-    navigator.clipboard.readText().then((text) => {
-      if (text.length === 5) {
-        setClip(text);
-      }
-    }).catch(() => { });
+    navigator.clipboard
+      .readText()
+      .then((text) => {
+        if (text.length === 5) {
+          setClip(text);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!(peerConnection && peerconState)) {
       const interval = setInterval(() => {
         if (!clip) {
-          navigator.clipboard.readText().then((text) => {
-            if (text.length === 5) {
-              setClip(text);
-              return true;
-            }
-            return false;
-          }).catch(() => { });
+          navigator.clipboard
+            .readText()
+            .then((text) => {
+              if (text.length === 5) {
+                setClip(text);
+                return true;
+              }
+              return false;
+            })
+            .catch(() => {});
         }
       }, 2000);
 
@@ -168,16 +200,22 @@ function Connect() {
     console.log(con);
     setPeerConnection && setPeerConnection(con);
     const interval = setInterval(() => {
-      console.log(con?.peerConnection?.connectionState)
-      if (con?.peerConnection?.connectionState && (con?.peerConnection?.connectionState === 'failed')) {
+      console.log(con?.peerConnection?.connectionState);
+      if (
+        con?.peerConnection?.connectionState &&
+        con?.peerConnection?.connectionState === "failed"
+      ) {
         con.close();
         setPeerConnection && setPeerConnection(undefined);
         connect(id);
         clearInterval(interval);
-      } else if (con?.peerConnection?.connectionState && (con?.peerConnection?.connectionState === 'connected')) {
+      } else if (
+        con?.peerConnection?.connectionState &&
+        con?.peerConnection?.connectionState === "connected"
+      ) {
         clearInterval(interval);
       }
-    }, 2000)
+    }, 2000);
   }
 
   return (
@@ -191,32 +229,40 @@ function Connect() {
       className="connect-page"
     >
       <header>
-        <h2>{!(peerconState && peerConnection) ? 'Connect to ID' : `Connected to ${peerConnection.peer}`}</h2>
+        <h2>
+          {!(peerconState && peerConnection)
+            ? "Connect to ID"
+            : `Connected to ${peerConnection.peer}`}
+        </h2>
         <SettingsEthernetOutlinedIcon />
       </header>
-      {!(peerconState && peerConnection) ? (<>
-        <TextField
-          id="partnerid"
-          label="partner id"
-          defaultValue=""
-          // fullWidth
-          InputProps={{ style: { caretColor: "white", color: "white" } }}
-          autoFocus
-          variant="outlined"
-          color="secondary"
-          onChange={(e) => {
-            setOtherid(e.target.value);
-          }}
-        />
-        <Button
-          disabled={!(otherid.length === 5)}
-          variant="text"
-          color="secondary"
-          onClick={() => connect(otherid)}
-        >
-          connect
-      </Button>
-      </>) : <></>}
+      {!(peerconState && peerConnection) ? (
+        <>
+          <TextField
+            id="partnerid"
+            label="partner id"
+            defaultValue=""
+            // fullWidth
+            InputProps={{ style: { caretColor: "white", color: "white" } }}
+            autoFocus
+            variant="outlined"
+            color="secondary"
+            onChange={(e) => {
+              setOtherid(e.target.value);
+            }}
+          />
+          <Button
+            disabled={!(otherid.length === 5)}
+            variant="text"
+            color="secondary"
+            onClick={() => connect(otherid)}
+          >
+            connect
+          </Button>
+        </>
+      ) : (
+        <></>
+      )}
       {clip || (peerconState && peerConnection) ? (
         <div className="quick-connect">
           <Fab
@@ -225,24 +271,33 @@ function Connect() {
               if (peerconState && peerConnection) {
                 peerConnection.close();
               } else {
-
-                connect(clip)
+                connect(clip);
               }
             }}
             variant="extended"
-
-            style={(peerconState && peerConnection) ? { background: 'coral', color: 'white' } : {}}
-
+            style={
+              peerconState && peerConnection
+                ? { background: "coral", color: "white" }
+                : {}
+            }
           >
-            {(peerconState && peerConnection) ? <></> : <AssignmentOutlinedIcon />}
-            <p>{
-              ((!peerconState && !peerConnection)) ? `connect to ${clip}`
-                : (!peerconState && peerConnection) ? `connecting to ${peerConnection.peer}` : `disconnect from ${peerConnection && peerConnection.peer}`}</p>
+            {peerconState && peerConnection ? (
+              <></>
+            ) : (
+              <AssignmentOutlinedIcon />
+            )}
+            <p>
+              {!peerconState && !peerConnection
+                ? `connect to ${clip}`
+                : !peerconState && peerConnection
+                ? `connecting to ${peerConnection.peer}`
+                : `disconnect from ${peerConnection && peerConnection.peer}`}
+            </p>
           </Fab>
         </div>
       ) : (
-          <></>
-        )}
+        <></>
+      )}
     </motion.div>
   );
 }
@@ -343,18 +398,18 @@ function Shade({ pullState }: { pullState: number }) {
           <SettingsEthernetOutlinedIcon />
         </div>
       ) : (
-          <div
-            style={{ background: peerconState ? "var(--accent)" : "coral" }}
-            className="menu-item"
-          >
-            <p>
-              {peerconState
-                ? `connected to ${peerConnection.peer}`
-                : `connecting to ${peerConnection.peer}`}
-            </p>
-            <SettingsEthernetOutlinedIcon />
-          </div>
-        )}
+        <div
+          style={{ background: peerconState ? "var(--accent)" : "coral" }}
+          className="menu-item"
+        >
+          <p>
+            {peerconState
+              ? `connected to ${peerConnection.peer}`
+              : `connecting to ${peerConnection.peer}`}
+          </p>
+          <SettingsEthernetOutlinedIcon />
+        </div>
+      )}
     </motion.div>
   );
 }
