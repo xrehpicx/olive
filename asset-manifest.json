@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/olive/static/css/main.7367691b.chunk.css",
-    "main.js": "/olive/static/js/main.c6ef70de.chunk.js",
-    "main.js.map": "/olive/static/js/main.c6ef70de.chunk.js.map",
+    "main.css": "/olive/static/css/main.753a09e2.chunk.css",
+    "main.js": "/olive/static/js/main.84b4612c.chunk.js",
+    "main.js.map": "/olive/static/js/main.84b4612c.chunk.js.map",
     "runtime-main.js": "/olive/static/js/runtime-main.3c8124cf.js",
     "runtime-main.js.map": "/olive/static/js/runtime-main.3c8124cf.js.map",
     "static/js/2.1af0f565.chunk.js": "/olive/static/js/2.1af0f565.chunk.js",
@@ -12,13 +12,13 @@
     "index.html": "/olive/index.html",
     "service-worker.js": "/olive/service-worker.js",
     "service-worker.js.map": "/olive/service-worker.js.map",
-    "static/css/main.7367691b.chunk.css.map": "/olive/static/css/main.7367691b.chunk.css.map",
+    "static/css/main.753a09e2.chunk.css.map": "/olive/static/css/main.753a09e2.chunk.css.map",
     "static/js/2.1af0f565.chunk.js.LICENSE.txt": "/olive/static/js/2.1af0f565.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
     "static/js/runtime-main.3c8124cf.js",
     "static/js/2.1af0f565.chunk.js",
-    "static/css/main.7367691b.chunk.css",
-    "static/js/main.c6ef70de.chunk.js"
+    "static/css/main.753a09e2.chunk.css",
+    "static/js/main.84b4612c.chunk.js"
   ]
 }
