@@ -3,71 +3,76 @@ import React, { createContext, useEffect, useState } from "react";
 // utils
 import Peer from "peerjs";
 import { nanoid } from "nanoid";
+import { ContextProps } from "./types";
 
-interface ContextProps {
-  peer: Peer;
-  peerConnection: Peer.DataConnection;
-  peerconState: boolean;
-  setPeerConnection: React.Dispatch<
-    React.SetStateAction<Peer.DataConnection | undefined>
-  >;
-  setPeerconState: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-export const PeerContext = createContext<Partial<ContextProps>>({});
+export const PeerContext = createContext<ContextProps | {}>({});
 
 export function PeerContextProvider({ children }: { children: any }) {
-  const [peer, setPeer] = useState<Peer>();
+  const [peer, setPeer] = useState<Peer | null>(null);
 
-  const [peerConnection, setPeerConnection] = useState<Peer.DataConnection>();
+  const [
+    peerConnection,
+    setPeerConnection,
+  ] = useState<Peer.DataConnection | null>(null);
   const [peerconState, setPeerconState] = useState(false);
+  const [pullPage, setPullPage] = useState("main");
+  const [messages, setMessage] = useState<any>([]);
 
   useEffect(() => {
-    console.log(peerconState)
-  }, [peerconState])
-
-  useEffect(() => {
-    console.log('peer con set:', peerConnection, peerconState)
-    if (peerConnection && !peerconState) {
-
-      const open = () => {
-        console.log('connected');
-        setPeerconState(true);
-      }
-
-      peerConnection.on('open', open)
-      console.log('open event set')
-
+    if (peerConnection && peerconState) {
+      const ondata = (data: any) => {
+        console.log(data);
+        if (data.type === "message") {
+          setMessage && setMessage((m: any) => [...m, data[data.type]]);
+        } else if (data.type === "event") {
+          if (data.event === "messages") setPullPage("messages");
+        }
+      };
+      peerConnection.on("data", ondata);
 
       return () => {
-        peerConnection.off('open', open)
-
-      }
+        peerConnection.off("data", ondata);
+      };
     }
-  }, [peerConnection, peerconState])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peerconState, peerConnection]);
+  useEffect(() => {
+    console.log("peer con set:", peerConnection, peerconState);
+    if (peerConnection && !peerconState) {
+      const open = () => {
+        console.log("connected");
+        setPeerconState(true);
+      };
+
+      peerConnection.on("open", open);
+
+      return () => {
+        peerConnection.off("open", open);
+      };
+    }
+  }, [peerConnection, peerconState]);
 
   useEffect(() => {
     if (peerConnection) {
       const close = () => {
-        console.log('disconnected');
+        console.log("disconnected");
         setPeerconState(false);
-        setPeerConnection(undefined);
-      }
+        setPeerConnection(null);
+      };
       const err = (err: any) => {
-        console.log('err', err);
+        console.log("err", err);
         setPeerconState(false);
-        setPeerConnection(undefined);
-
-      }
-      peerConnection.on('close', close)
-      peerConnection.on('error', err)
+        setPeerConnection(null);
+      };
+      peerConnection.on("close", close);
+      peerConnection.on("error", err);
 
       return () => {
-        peerConnection.off('close', close)
-        peerConnection.off('error', err)
-      }
+        peerConnection.off("close", close);
+        peerConnection.off("error", err);
+      };
     }
-  }, [peerConnection])
+  }, [peerConnection]);
 
   useEffect(() => {
     const p = new Peer(nanoid(5), {
@@ -78,27 +83,26 @@ export function PeerContextProvider({ children }: { children: any }) {
     const open = (id: string) => {
       setPeer(p);
       console.log(id);
-    }
+    };
     const err = (err: any) => {
       if (err.type === "unavailable-id") {
         window.location.reload();
       }
-    }
+    };
     const connection = (conn: Peer.DataConnection) => {
-      console.log('getting connection from', conn.peer)
+      console.log("getting connection from", conn.peer);
       setPeerConnection(conn);
-    }
+    };
     p.on("open", open);
 
     p.on("error", err);
     p.on("connection", connection);
 
     return () => {
-      p.off('open', open);
-      p.off('error', err);
-      p.off('connection', connection);
-    }
-
+      p.off("open", open);
+      p.off("error", err);
+      p.off("connection", connection);
+    };
   }, []);
 
   return (
@@ -106,9 +110,13 @@ export function PeerContextProvider({ children }: { children: any }) {
       value={{
         peer,
         peerConnection,
+        messages,
         setPeerConnection,
         peerconState,
         setPeerconState,
+        setMessage,
+        pullPage,
+        setPullPage,
       }}
     >
       {children}

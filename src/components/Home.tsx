@@ -1,4 +1,10 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { PeerContext } from "./PeerContext";
 import {
   AnimatePresence,
@@ -7,7 +13,7 @@ import {
   useTransform,
 } from "framer-motion";
 import "./css/home.css";
-
+import SendOutlinedIcon from "@material-ui/icons/SendOutlined";
 import SettingsEthernetOutlinedIcon from "@material-ui/icons/SettingsEthernetOutlined";
 import ShareOutlinedIcon from "@material-ui/icons/ShareOutlined";
 import HelpOutlineIcon from "@material-ui/icons/HelpOutline";
@@ -17,90 +23,111 @@ import Button from "@material-ui/core/Button";
 import AssignmentOutlinedIcon from "@material-ui/icons/AssignmentOutlined";
 import Fab from "@material-ui/core/Fab";
 import { copyTextToClipboard } from "./utils";
+import { InputBase } from "@material-ui/core";
+import { ContextProps } from "./types";
 
 export default function Home() {
-  const { peer, peerConnection, peerconState } = useContext(PeerContext);
+  const {
+    peer,
+    peerConnection,
+    peerconState,
+    pullPage,
+    setPullPage,
+  } = useContext(PeerContext) as ContextProps;
 
   const [pullState, setPullState] = useState(0);
-  const [pullPage, setPullPage] = useState("main");
+
   const [shade, setShade] = useState(false);
+
   const y = useMotionValue(0);
-  const background = useTransform(
-    y,
-    [-100, 0],
-    ["#161922", "#0077ff"].reverse()
+  const background = useTransform(y, [-100, 0], ["#0077ff", "#161922"]);
+
+  const runMenu = useCallback(
+    function (ps: number) {
+      switch (ps) {
+        case 0:
+          setPullPage("main");
+          break;
+        case 1:
+          setPullPage("connect");
+          break;
+        case 2:
+          peer && copyTextToClipboard(peer.id);
+          if (navigator.share && peer) {
+            navigator.share({ text: peer.id });
+          }
+          break;
+        case 3:
+          // share
+          setPullPage("about");
+          break;
+        case 4:
+          // share
+          setPullPage("messages");
+          peerConnection?.send({ type: "event", event: "messages" });
+          break;
+        default:
+        // do something
+      }
+    },
+    [peer, peerConnection, setPullPage]
   );
-  function runMenu(ps: number) {
-    switch (ps) {
-      case 0:
-        setPullPage("main");
-        break;
-      case 1:
-        setPullPage("connect");
-        break;
-      case 2:
-        peer && copyTextToClipboard(peer.id);
-        break;
-      case 3:
-        // share
-        setPullPage("about");
-        break;
-      default:
-      // do something
-    }
-  }
 
   useEffect(() => {
-    if (peerConnection && peerconState) {
-      if (pullPage !== "connect") setPullPage("connect");
+    if (peerconState) {
+      setPullPage("connect");
     }
-  }, [peerConnection, peerconState, pullPage]);
+  }, [peerconState, setPullPage]);
+
+  useEffect(() => {
+    if (!peerconState && pullPage === "messages") {
+      runMenu(0);
+    }
+  }, [pullPage, peerconState, runMenu]);
 
   return (
     <motion.div
-      style={{ background: peerconState ? background : "" }}
+      style={{
+        background: peerconState && pullPage !== "messages" ? background : "",
+      }}
       className="home"
     >
       <AnimatePresence>
         {shade && pullState > 0 ? <Shade {...{ pullState }} /> : ""}
       </AnimatePresence>
       <motion.header
-        drag="y"
+        drag={pullPage !== "messages" ? "y" : false}
         style={{ y }}
-        onDragStart={
-          !peerconState
-            ? () => {
-                setShade(true);
-                setPullState(0);
-              }
-            : () => {}
-        }
-        onDragEnd={
-          !peerconState
-            ? () => {
-                setShade(false);
-                runMenu(pullState);
-              }
-            : () => {}
-        }
-        onDrag={
-          !peerconState
-            ? (e, i) => {
-                if (peer) {
-                  const y = -i.offset.y;
-                  if (y > 250 && y < 400) {
-                    setPullState(1);
-                  } else if (y >= 400 && y < 500) {
-                    setPullState(2);
-                  } else if (y >= 500 && y < 550) {
-                    setPullState(3);
-                  } else if (y <= 250) {
-                    setPullState(0);
-                  }
-                }
-              }
-            : () => {}
-        }
+        onDragStart={() => {
+          if (!peerconState) {
+            setShade(true);
+            setPullState(0);
+          }
+        }}
+        onDragEnd={() => {
+          if (!peerconState) {
+            setShade(false);
+          }
+          runMenu(pullState);
+        }}
+        onDrag={(e, i) => {
+          const y = -i.offset.y;
+          if (peer && !peerconState) {
+            if (y > 250 && y < 400) {
+              setPullState(1);
+            } else if (y >= 400 && y < 500) {
+              setPullState(2);
+            } else if (y >= 500 && y < 550) {
+              setPullState(3);
+            } else if (y <= 250) {
+              setPullState(0);
+            }
+          } else if (peer && peerconState) {
+            if (y >= 400 && y < 500) {
+              setPullState(4);
+            }
+          }
+        }}
         dragConstraints={{ top: 0, bottom: 0 }}
       >
         {peer ? (
@@ -116,6 +143,8 @@ export default function Home() {
             <About />
           ) : pullPage === "connect" ? (
             <Connect />
+          ) : pullPage === "messages" ? (
+            <Messages setPullPage={setPullPage} />
           ) : (
             <></>
           )
@@ -155,11 +184,111 @@ export default function Home() {
   );
 }
 
+function Messages({
+  setPullPage,
+}: {
+  setPullPage: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  return (
+    <motion.div
+      animate={{
+        opacity: 1,
+        height: window.innerHeight,
+        background: "#161922",
+      }}
+      className="messages"
+    >
+      <MessageHeader />
+      <MessageContainer setPullPage={setPullPage} />
+      <MessageInput />
+    </motion.div>
+  );
+}
+
+function MessageHeader() {
+  const { peerConnection } = useContext(PeerContext) as ContextProps;
+  return (
+    <header>
+      <h2>Olive</h2>
+      <p>Connected to {peerConnection?.peer}</p>
+    </header>
+  );
+}
+
+function MessageInput() {
+  const { peerConnection, setMessage } = useContext(
+    PeerContext
+  ) as ContextProps;
+  const [sendBtn, setSendBtn] = useState(false);
+
+  const message = useRef("");
+  const inputfield = useRef<any>();
+
+  function send() {
+    if (sendBtn) {
+      console.log(message.current.trim());
+      const m = { text: message.current.trim() };
+      peerConnection?.send({ message: m, type: "message" });
+      setMessage && setMessage((mess: any) => [...mess, { ...m, sent: true }]);
+      inputfield.current?.value && (inputfield.current.value = "");
+      inputfield.current?.focus && inputfield.current?.focus();
+    }
+  }
+
+  return (
+    <div className="message-input">
+      <InputBase
+        inputRef={inputfield}
+        fullWidth
+        autoFocus
+        multiline
+        onChange={(e) => {
+          message.current = e.target.value;
+          if (message.current.trim()) {
+            setSendBtn(true);
+          } else {
+            setSendBtn(false);
+          }
+        }}
+        inputProps={{ style: { caretColor: "#0077ff", color: "white" } }}
+      />
+
+      <SendOutlinedIcon
+        style={{ color: "#0077ff", opacity: sendBtn ? 1 : 0.5 }}
+        onClick={send}
+      />
+    </div>
+  );
+}
+function MessageContainer({
+  setPullPage,
+}: {
+  setPullPage: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const { messages, peerConnection, peerconState, setMessage } = useContext(
+    PeerContext
+  ) as ContextProps;
+
+  return (
+    <div className="messages-container">
+      {messages?.map((m, i) => <Message key={i} message={m} />).reverse()}
+    </div>
+  );
+}
+
+function Message({ message }: { message: any }) {
+  return (
+    <div className={message.sent ? "message sent-message" : "message"}>
+      <p>{message.text}</p>
+    </div>
+  );
+}
+
 function Connect() {
   const [clip, setClip] = useState("");
   const { peer, peerConnection, peerconState, setPeerConnection } = useContext(
     PeerContext
-  );
+  ) as ContextProps;
   const [otherid, setOtherid] = useState("");
 
   useEffect(() => {
@@ -200,7 +329,10 @@ function Connect() {
     console.log(con);
     setPeerConnection && setPeerConnection(con);
     const interval = setInterval(() => {
-      console.log(con?.peerConnection?.connectionState);
+      console.log(
+        "checking connetionState",
+        con?.peerConnection?.connectionState
+      );
       if (
         con?.peerConnection?.connectionState &&
         con?.peerConnection?.connectionState === "failed"
@@ -210,8 +342,9 @@ function Connect() {
         connect(id);
         clearInterval(interval);
       } else if (
-        con?.peerConnection?.connectionState &&
-        con?.peerConnection?.connectionState === "connected"
+        (con?.peerConnection?.connectionState &&
+          con?.peerConnection?.connectionState === "connected") ||
+        !con?.peerConnection?.connectionState
       ) {
         clearInterval(interval);
       }
@@ -363,7 +496,9 @@ function PeerID({
 }
 
 function Shade({ pullState }: { pullState: number }) {
-  const { peerConnection, peerconState } = useContext(PeerContext);
+  const { peerConnection, peerconState } = useContext(
+    PeerContext
+  ) as ContextProps;
 
   return (
     <motion.div
