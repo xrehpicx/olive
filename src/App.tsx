@@ -1,22 +1,25 @@
-import React, { useContext, useEffect } from 'react';
-import { PeerContext, PeerContextProvider } from './components/PeerContext';
-
-
+import { createMuiTheme, ThemeProvider } from "@material-ui/core";
+import React from "react";
+import Home from "./components/Home";
+import { PeerContextProvider } from "./components/PeerContext";
 
 function App() {
-
-  const { peer } = useContext(PeerContext);
-
-  useEffect(() => {
-    console.log(peer?.id)
-  }, [peer])
-
+  const theme = createMuiTheme({
+    palette: {
+      primary: {
+        main: "#0077ff",
+      },
+      secondary: {
+        main: "#ffff",
+      },
+    },
+  });
   return (
-    <PeerContextProvider>
-      <div className="App">
-
-      </div>
-    </PeerContextProvider>
+    <ThemeProvider theme={theme}>
+      <PeerContextProvider>
+        <Home />
+      </PeerContextProvider>
+    </ThemeProvider>
   );
 }
 
